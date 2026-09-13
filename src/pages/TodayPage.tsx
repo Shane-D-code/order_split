@@ -18,6 +18,7 @@ import {
 } from "../components/design/Art";
 import { listOrdersForDay } from "../db/repositories/orders";
 import { listReceivedOrders } from "../db/repositories/received";
+import { listFamilyMembers } from "../db/repositories/family";
 import type { Order, Platform, ReceivedOrder } from "../domain/types";
 import { formatRupee } from "../money/format";
 import { localDayKey } from "../lib/dates";
@@ -68,6 +69,17 @@ export function TodayPage() {
   const [today, setToday] = useState<Order[]>([]);
   const [received, setReceived] = useState<ReceivedOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [connected, setConnected] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    void listFamilyMembers().then((members) => {
+      if (alive) setConnected(members.length > 0);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [run]);
 
   const load = useCallback(async () => {
     const day = localDayKey();
@@ -95,6 +107,7 @@ export function TodayPage() {
           <SyncPill
             syncing={syncing}
             failed={run.failed}
+            connected={connected}
             hasRun={run.sent + run.received + run.acked > 0}
           />
         </div>

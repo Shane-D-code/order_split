@@ -129,9 +129,20 @@ export function SettingsPage() {
     void (async () => {
       setRelay(await getRelayUrl());
       setRetention(String(await getRetentionDays()));
-      setFamily(await listFamilyMembers());
     })();
   }, []);
+
+  // Reload the family list whenever a sync run lands so a pairing-ack
+  // processed by the engine (or a just-finished scan) shows up immediately.
+  useEffect(() => {
+    let alive = true;
+    void listFamilyMembers().then((members) => {
+      if (alive) setFamily(members);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [run]);
 
   async function saveRelay() {
     setSaving(true);
@@ -205,7 +216,12 @@ export function SettingsPage() {
                       Remove
                     </button>
                   }
-                />
+                >
+                  <p className="mt-0.5 flex items-center gap-1.5 text-xs font-semibold text-muted">
+                    <span className="h-2 w-2 rounded-full bg-leaf" aria-hidden="true" />
+                    Connected
+                  </p>
+                </SettingsRow>
               ))}
             </ul>
           )}
@@ -226,6 +242,7 @@ export function SettingsPage() {
             <SyncPill
               syncing={syncing}
               failed={run.failed}
+              connected={family.length > 0}
               hasRun={run.sent + run.received + run.acked > 0}
             />
             <Button variant="secondary" size="sm" onClick={() => void refresh()}>

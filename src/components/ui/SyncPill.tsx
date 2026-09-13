@@ -2,14 +2,21 @@
  * Friendly sync status sticker. States keep the queue internals abstract:
  * synced / syncing / waiting / delayed. Healthy states stay quiet —
  * only warning/error states get prominent treatment.
+ *
+ * `connected` means a successful pairing handshake (a FamilyMember row with
+ * pairingStatus "connected" exists). It is derived from the family store,
+ * not from whether messages have flowed: right after pairing, both devices
+ * are connected before any order has ever been shared.
  */
 export function SyncPill({
   syncing,
   failed,
+  connected,
   hasRun,
 }: {
   syncing: boolean;
   failed: number;
+  connected: boolean;
   hasRun: boolean;
 }) {
   if (syncing) {
@@ -35,6 +42,14 @@ export function SyncPill({
       <span className="inline-flex items-center gap-1.5 rounded-md border border-ink/25 bg-surface/80 px-2.5 py-1 text-xs font-extrabold text-muted">
         <span className="h-2 w-2 rounded-full bg-leaf" />
         Synced
+      </span>
+    );
+  }
+  if (connected) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-md border border-ink/25 bg-surface/80 px-2.5 py-1 text-xs font-extrabold text-muted">
+        <span className="h-2 w-2 rounded-full bg-leaf" />
+        Connected
       </span>
     );
   }

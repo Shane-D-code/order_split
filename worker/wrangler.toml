@@ -4,7 +4,7 @@ compatibility_date = "2024-12-01"
 
 [[kv_namespaces]]
 binding = "MAILBOX"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "8d725206d8dc426cbe12c578bb6597bc"
 
 [vars]
 # Fine tune as needed; KV namespaces have per-writer limits, so keep the

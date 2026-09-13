@@ -207,8 +207,17 @@ export async function pollInbox(): Promise<SyncRun> {
         await client_.acknowledgeMessage(relayMessage.id);
         result.acked++;
         await deleteInboxMessage(relayMessage.id);
-      } catch {
+        // The relay has dropped the message, so a redelivery can no longer
+        // need the seed — stop tracking the pending invite.
+        if (outcome.pairingSeed) await consumePairingSeed(outcome.pairingSeed);
+      } catch (err) {
         result.failed++;
+        // Keep the seed when the ACK failed: the relay may redeliver the
+        // same message, and finalizePairing is idempotent on the member.
+        // An "expired" reply means the relay already dropped it for us.
+        if (outcome.pairingSeed && err instanceof RelayError && err.kind === "expired") {
+          await consumePairingSeed(outcome.pairingSeed);
+        }
       }
       if (outcome.receivedOrder) result.received++;
     } else if (outcome.receivedOrder === false) {
@@ -222,6 +231,8 @@ interface InboxOutcome {
   handled: boolean;
   /** True when a new order was stored, false when dedup or failure. */
   receivedOrder?: boolean;
+  /** Seed that successfully decrypted a pairing-ack; consumed once acked. */
+  pairingSeed?: string;
 }
 
 async function handleInboxMessage(relayMessage: RelayMessage): Promise<InboxOutcome> {
@@ -286,9 +297,9 @@ async function handlePairingAck(relayMessage: RelayMessage): Promise<InboxOutcom
   for (const seed of seeds) {
     try {
       const member = await finalizePairing(seed, relayMessage.payload);
+      // Upsert keyed by deviceId — idempotent across redeliveries.
       await addFamilyMember(member);
-      await consumePairingSeed(seed);
-      return { handled: true };
+      return { handled: true, pairingSeed: seed };
     } catch {
       // wrong seed for this message; try next
     }

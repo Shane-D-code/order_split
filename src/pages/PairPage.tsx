@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Screen, Spinner } from "../components/ui/Screen";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
+import { QrScanner } from "../components/scanner/QrScanner";
 import { PhonePair, Sparkle } from "../components/design/Art";
 import { useIdentity } from "../app/onboarding";
 import { getRelayUrl } from "../db/repositories/settings";
@@ -190,12 +191,12 @@ function AcceptPane({
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function accept() {
+  async function acceptFromText(incoming: string): Promise<boolean> {
     onError(null);
-    const invite = parsePairInvite(text);
+    const invite = parsePairInvite(incoming);
     if (!invite) {
       onError("This doesn't look like a valid invite. Scan it again or paste the full text.");
-      return;
+      return false;
     }
     setBusy(true);
     try {
@@ -213,23 +214,52 @@ function AcceptPane({
         pairedAt: new Date().toISOString(),
       });
       onError(null);
+      return true;
     } catch (err) {
       handleRelayErr(err, onError);
+      return false;
     } finally {
       setBusy(false);
     }
   }
 
+  function accept() {
+    return acceptFromText(text).then((ok) => {
+      if (ok) setText("");
+    });
+  }
+
+  function handleScan(scannedText: string): boolean {
+    const invite = parsePairInvite(scannedText);
+    if (!invite) return false;
+    setText(scannedText);
+    void acceptFromText(scannedText);
+    return true;
+  }
+
   return (
     <Card className="space-y-3 p-4">
-      <p className="text-sm font-bold text-ink">Paste the invite text from the other phone.</p>
+      <p className="text-sm font-bold text-ink">
+        Scan the code from the other phone, or paste the invite text below.
+      </p>
+      <QrScanner onResult={handleScan} />
+      <div className="flex items-center gap-2 px-1" aria-hidden="true">
+        <span className="h-px flex-1 bg-line" />
+        <span className="text-[11px] font-extrabold uppercase tracking-wide text-muted">or</span>
+        <span className="h-px flex-1 bg-line" />
+      </div>
       <textarea
         className="h-24 w-full rounded-sm border-2 border-line bg-surface-2 px-3.5 py-3 text-sm font-medium text-ink outline-none transition-colors placeholder:text-muted/70 focus:border-gold"
         placeholder="Paste the full invite text here…"
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
-      <Button className="w-full" loading={busy} disabled={busy} onClick={() => void accept()}>
+      <Button
+        className="w-full"
+        loading={busy}
+        disabled={busy}
+        onClick={() => void accept()}
+      >
         {busy ? "Pairing…" : "Accept pairing"}
       </Button>
       <p className="text-xs text-muted">
