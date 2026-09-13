@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { handleApi, generatePairingCode, minuteKey } from "../src/relay";
+import worker from "../src/index";
 import type { Env, KVPutOptions, KVStore } from "../src/env";
 
 class InMemoryKV implements KVStore {
@@ -207,3 +208,89 @@ describe("mailbox", () => {
 function kvStoreValue(kv: InMemoryKV, key: string): string {
   return (kv as unknown as { map: Map<string, { value: string }> }).map.get(key)!.value;
 }
+
+// ── CORS / fetch-boundary tests ──────────────────────────────────────
+
+function workerUrl(path: string, method = "GET", body?: unknown, token?: string): Request {
+  const init: RequestInit = {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { "X-Device-Token": token } : {}),
+    },
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  };
+  return new Request(`https://family-order-relay.sanjaynasl30.workers.dev${path}`, init);
+}
+
+async function fetchWorker(
+  request: Request,
+  kvStore: InMemoryKV,
+): Promise<{ status: number; headers: Record<string, string>; data: unknown }> {
+  const env: Env = { MAILBOX: kvStore };
+  const res = await worker.fetch(request, env);
+  const headers: Record<string, string> = {};
+  res.headers.forEach((v, k) => { headers[k] = v; });
+  let data: unknown;
+  try { data = await res.json(); } catch { data = null; }
+  return { status: res.status, headers, data };
+}
+
+const CORS = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-methods": "GET, HEAD, POST, OPTIONS",
+  "access-control-allow-headers": "Content-Type, X-Device-Token",
+} as const;
+
+describe("CORS", () => {
+  it("OPTIONS returns 204 with preflight headers and never hits handleApi", async () => {
+    const res = await fetchWorker(
+      new Request("https://family-order-relay.sanjaynasl30.workers.dev/pair/initiate", {
+        method: "OPTIONS",
+        headers: {
+          Origin: "https://family-order.vercel.app",
+          "Access-Control-Request-Method": "POST",
+          "Access-Control-Request-Headers": "Content-Type, X-Device-Token",
+        },
+      }),
+      kv,
+    );
+    expect(res.status).toBe(204);
+    for (const [k, v] of Object.entries(CORS)) expect(res.headers[k]).toBe(v);
+  });
+
+  it("cors headers appear on error responses (401)", async () => {
+    const res = await fetchWorker(workerUrl("/messages", "GET"), kv);
+    expect(res.status).toBe(401);
+    for (const [k, v] of Object.entries(CORS)) expect(res.headers[k]).toBe(v);
+  });
+
+  it("POST /pair/initiate works through the fetch boundary with cors headers", async () => {
+    const res = await fetchWorker(
+      workerUrl("/pair/initiate", "POST", { deviceId: "dA", displayName: "A" }, "tokA"),
+      kv,
+    );
+    expect(res.status).toBe(201);
+    for (const [k, v] of Object.entries(CORS)) expect(res.headers[k]).toBe(v);
+    expect((res.data as { pairingCode: string }).pairingCode).toHaveLength(8);
+  });
+
+  it("GET /messages works through the fetch boundary with cors headers", async () => {
+    await fetchWorker(
+      workerUrl("/pair/initiate", "POST", { deviceId: "dA" }, "tokA"),
+      kv,
+    );
+    const res = await fetchWorker(workerUrl("/messages", "GET", undefined, "tokA"), kv);
+    expect(res.status).toBe(200);
+    for (const [k, v] of Object.entries(CORS)) expect(res.headers[k]).toBe(v);
+  });
+
+  it("/health carries cors headers", async () => {
+    const res = await fetchWorker(
+      new Request("https://family-order-relay.sanjaynasl30.workers.dev/health"),
+      kv,
+    );
+    expect(res.status).toBe(200);
+    for (const [k, v] of Object.entries(CORS)) expect(res.headers[k]).toBe(v);
+  });
+});
