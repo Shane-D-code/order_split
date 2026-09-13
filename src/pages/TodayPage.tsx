@@ -19,7 +19,8 @@ import {
 import { listOrdersForDay } from "../db/repositories/orders";
 import { listReceivedOrders } from "../db/repositories/received";
 import { listFamilyMembers } from "../db/repositories/family";
-import type { Order, Platform, ReceivedOrder } from "../domain/types";
+import type { FamilyMember, Order, Platform, ReceivedOrder } from "../domain/types";
+import { senderName } from "../domain/family";
 import { formatRupee } from "../money/format";
 import { localDayKey } from "../lib/dates";
 import { useSync } from "../app/SyncContext";
@@ -32,9 +33,15 @@ interface Merged {
   total: number;
   platform: Platform;
   count: number;
+  /** Sender display name for received cards; undefined for own orders. */
+  from?: string;
 }
 
-function mergeCards(own: Order[], received: ReceivedOrder[]): Merged[] {
+function mergeCards(
+  own: Order[],
+  received: ReceivedOrder[],
+  members: FamilyMember[],
+): Merged[] {
   const ownCards: Merged[] = own.map((o) => ({
     id: o.id,
     kind: "own",
@@ -52,6 +59,7 @@ function mergeCards(own: Order[], received: ReceivedOrder[]): Merged[] {
       total: r.total,
       platform: r.platform,
       count: itemCount(r.items),
+      from: senderName(r.fromDeviceId, members),
     }));
   return [...ownCards, ...recvCards].sort((a, b) => b.orderedAt.localeCompare(a.orderedAt));
 }
@@ -68,13 +76,17 @@ export function TodayPage() {
   const { run, syncing } = useSync();
   const [today, setToday] = useState<Order[]>([]);
   const [received, setReceived] = useState<ReceivedOrder[]>([]);
+  const [members, setMembers] = useState<FamilyMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    void listFamilyMembers().then((members) => {
-      if (alive) setConnected(members.length > 0);
+    void listFamilyMembers().then((ms) => {
+      if (alive) {
+        setMembers(ms);
+        setConnected(ms.length > 0);
+      }
     });
     return () => {
       alive = false;
@@ -83,12 +95,15 @@ export function TodayPage() {
 
   const load = useCallback(async () => {
     const day = localDayKey();
-    const [own, recv] = await Promise.all([
+    const [own, recv, ms] = await Promise.all([
       listOrdersForDay(day),
       listReceivedOrders({ from: day }),
+      listFamilyMembers(),
     ]);
     setToday(own);
     setReceived(recv);
+    setMembers(ms);
+    setConnected(ms.length > 0);
     setLoading(false);
   }, []);
 
@@ -96,7 +111,7 @@ export function TodayPage() {
     void load();
   }, [load, run]);
 
-  const cards = mergeCards(today, received);
+  const cards = mergeCards(today, received, members);
   const dayTotal = cards.reduce((acc, c) => acc + c.total, 0);
 
   return (
@@ -215,6 +230,7 @@ export function TodayPage() {
                 itemCount={c.count}
                 to={c.kind === "own" ? `/order/${c.id}` : `/received/${c.id}`}
                 badge={c.kind === "received" ? "Shared" : undefined}
+                from={c.from}
                 tilt={i % 2 === 1 ? 0.5 : -0.4}
               />
             ))}

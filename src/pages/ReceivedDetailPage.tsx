@@ -3,16 +3,31 @@ import { useParams } from "react-router-dom";
 import { Screen, Spinner, EmptyState } from "../components/ui/Screen";
 import { OrderView } from "../components/orders/OrderView";
 import { getReceivedOrder, deleteReceivedOrder } from "../db/repositories/received";
+import { getFamilyMember } from "../db/repositories/family";
+import { memberDisplayName } from "../domain/family";
 import type { ReceivedOrder } from "../domain/types";
 import { formatDateTime } from "../lib/dates";
 
 export function ReceivedDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [order, setOrder] = useState<ReceivedOrder | null | undefined>(undefined);
+  const [senderName, setSenderName] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
-    void getReceivedOrder(id!).then(setOrder);
+    let alive = true;
+    void (async () => {
+      const found = await getReceivedOrder(id!);
+      if (!alive) return;
+      setOrder(found);
+      if (found) {
+        const member = await getFamilyMember(found.fromDeviceId);
+        if (alive) setSenderName(memberDisplayName(member));
+      }
+    })();
+    return () => {
+      alive = false;
+    };
   }, [id]);
 
   async function handleDelete() {
@@ -43,6 +58,9 @@ export function ReceivedDetailPage() {
         </span>
       }
     >
+      <p className="mb-1 text-xs font-extrabold uppercase tracking-[0.14em] text-coral-deep">
+        From {senderName ?? "…"}
+      </p>
       <p className="mb-3 text-sm font-semibold text-soft">
         Received {formatDateTime(order.receivedAt)}
       </p>

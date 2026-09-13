@@ -12,6 +12,8 @@ interface OrderCardProps {
   itemCount: number;
   to: string;
   badge?: string;
+  /** Sender display name for shared orders; own orders pass nothing. */
+  from?: string;
   /** Alternating composition keeps the feed editorial without chaos. */
   tilt?: number;
 }
@@ -23,6 +25,7 @@ export function OrderCard({
   itemCount,
   to,
   badge,
+  from,
   tilt = 0,
 }: OrderCardProps) {
   const time = formatTime(orderedAt);
@@ -46,6 +49,11 @@ export function OrderCard({
               </span>
             ) : null}
           </div>
+          {from ? (
+            <p className="mt-1 text-xs font-extrabold tracking-[0.14em] text-coral-deep">
+              From {from}
+            </p>
+          ) : null}
           <p className="mt-1.5 text-sm font-semibold text-soft">
             {time} · {itemCount} item{itemCount === 1 ? "" : "s"}
           </p>

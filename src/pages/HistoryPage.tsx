@@ -5,7 +5,9 @@ import { PlatformBadge } from "../components/orders/PlatformBadge";
 import { Squiggle, Basket } from "../components/design/Art";
 import { listAllOwnOrders } from "../db/repositories/orders";
 import { listReceivedOrders } from "../db/repositories/received";
-import type { Order, Platform, ReceivedOrder } from "../domain/types";
+import { listFamilyMembers } from "../db/repositories/family";
+import type { FamilyMember, Order, Platform, ReceivedOrder } from "../domain/types";
+import { senderName } from "../domain/family";
 import { itemCount } from "../domain/order";
 import { groupByBucket, type HistoryBucket, formatTime, formatDate } from "../lib/dates";
 import { formatRupeeCompact } from "../money/format";
@@ -17,9 +19,11 @@ interface Merged {
   total: number;
   platform: Platform;
   count: number;
+  /** Sender display name for received rows; undefined for own orders. */
+  from?: string;
 }
 
-function buildMerged(own: Order[], recv: ReceivedOrder[]): Merged[] {
+function buildMerged(own: Order[], recv: ReceivedOrder[], members: FamilyMember[]): Merged[] {
   return [
     ...own.map((o) => ({
       id: o.id,
@@ -38,6 +42,7 @@ function buildMerged(own: Order[], recv: ReceivedOrder[]): Merged[] {
         total: r.total,
         platform: r.platform,
         count: itemCount(r.items),
+        from: senderName(r.fromDeviceId, members),
       })),
   ];
 }
@@ -51,6 +56,11 @@ function ArchiveRow({ item }: { item: Merged }) {
       >
         <div className="min-w-0">
           <PlatformBadge platform={item.platform} />
+          {item.from ? (
+            <p className="mt-1 text-[11px] font-extrabold tracking-[0.14em] text-coral-deep">
+              From {item.from}
+            </p>
+          ) : null}
           <p className="mt-0.5 text-xs font-semibold text-muted">
             {formatTime(item.orderedAt)} · {item.count} item{item.count === 1 ? "" : "s"}
           </p>
@@ -67,8 +77,12 @@ export function HistoryPage() {
   const [groups, setGroups] = useState<Array<{ bucket: HistoryBucket; items: Merged[] }>>([]);
 
   const load = useCallback(async () => {
-    const [own, recv] = await Promise.all([listAllOwnOrders(), listReceivedOrders()]);
-    const merged = buildMerged(own, recv);
+    const [own, recv, members] = await Promise.all([
+      listAllOwnOrders(),
+      listReceivedOrders(),
+      listFamilyMembers(),
+    ]);
+    const merged = buildMerged(own, recv, members);
     setGroups(groupByBucket(merged));
   }, []);
 
