@@ -1,0 +1,11 @@
+import { chromium } from "playwright";
+const browser = await chromium.launch();
+const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: "light", locale: "en-IN" });
+const page = await ctx.newPage();
+page.on("console", (m) => console.log("CONSOLE:", m.type(), m.text().slice(0, 120)));
+page.on("pageerror", (e) => console.log("PAGEERROR:", e.message.slice(0, 200)));
+await page.goto("http://localhost:4173/", { waitUntil: "load" });
+await page.waitForTimeout(1200);
+console.log("TITLE:", await page.title());
+console.log("BODY:", (await page.locator("body").innerText()).slice(0, 200).replace(/\n/g, " | "));
+await browser.close();

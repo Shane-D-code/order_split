@@ -1,0 +1,342 @@
+@import "tailwindcss";
+@import "@fontsource-variable/bricolage-grotesque";
+
+/* ============================================================
+   FAMILY ORDERS — bright illustrated editorial design tokens
+
+   Light mode is the PRIMARY identity and the DEFAULT: a sunny
+   golden canvas with warm cream paper surfaces, dark-brown INK for
+   type/outlines and coral/teal/green as small playful accents.
+
+   Dark mode is an EXPLICIT alternate theme, never inherited from
+   the operating system. The OS preference is ignored; the app
+   opens sunny-light for every fresh user unless they choose dark.
+   The active theme lives on <html data-theme> (applied from the
+   persisted choice before first paint) and remaps the same tokens
+   to a warm night palette without restructuring.
+
+   Components only consume these tokens (or their Tailwind
+   utilities), never raw values.
+   ============================================================ */
+
+:root {
+  color-scheme: light;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* --- Sunny light palette ---
+     Yellow = environment · Cream = paper · Dark brown = ink ·
+     Coral = action · Teal/Green = illustration accents */
+  --fo-canvas: #f8c95b; /* bright sunny golden environment */
+  --fo-surface: #fff8e4; /* warm cream paper surfaces / cards */
+  --fo-surface-2: #fffdf5; /* raised surfaces / inputs */
+  --fo-tint: #f7d88a; /* gold-tinted fill for soft sections */
+  --fo-ink: #2a1c0e; /* near-black warm brown, primary text */
+  --fo-ink-fixed: #2a1c0e; /* constant dark ink for sticker fills (never flips) */
+  --fo-soft: #6a5133; /* secondary text (clears AA on golden canvas) */
+  --fo-muted: #6a4f2e; /* tertiary text / captions (clears AA on golden canvas) */
+  --fo-line: #e4c487; /* rules / borders / separators */
+  --fo-gold: #f2a71b; /* brand gold — heroes, accent fills */
+  --fo-sun: #ffc33c; /* light gold pop */
+  --fo-sun-pale: #ffedb4; /* soft halo fills */
+  --fo-tomato: #f4512c; /* coral action accent (reference family) */
+  --fo-coral-deep: #b23717; /* coral used as TEXT, clears AA on cream */
+  --fo-teal: #118c74; /* secondary illustration accent */
+  --fo-teal-deep: #0e7a64; /* teal used as TEXT, clears AA on cream */
+  --fo-leaf: #6fa23e; /* success / freshness accent */
+  --fo-cream: #fff9ea; /* text on dark fills */
+  --fo-on-ink: #fff9ea; /* constant light text for dark fills (does not flip) */
+  --fo-on-gold: #2a1c0e; /* constant dark text for gold fills (does not flip) */
+  --fo-danger: #b92b1f; /* destructive / blocking */
+
+  /* Sticker shadows — all resolve through --fo-ink so they flip in
+     dark mode; the paper shadow keeps a translucent warm brown. */
+  --fo-shadow-sticker: 5px 6px 0 0 var(--fo-ink);
+  --fo-shadow-hero: 7px 8px 0 0 var(--fo-ink);
+  --fo-shadow-puff: 3px 4px 0 0 var(--fo-ink);
+  --fo-shadow-paper: 4px 5px 0 0 rgb(42 28 14 / 0.14);
+}
+
+/* Dark palette applies ONLY when the user explicitly chooses it.
+   There is deliberately no `prefers-color-scheme` block: a system
+   dark preference must not turn the default experience dark. */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --fo-canvas: #241a0f;
+  --fo-surface: #2e2314;
+  --fo-surface-2: #3a2c17;
+  --fo-tint: #4a3a20;
+  --fo-ink: #f5ead2;
+  --fo-soft: #d3bd97;
+  --fo-muted: #c2a878;
+  --fo-line: #53412a;
+  --fo-sun-pale: #6b542c;
+  --fo-shadow-paper: 4px 5px 0 0 rgb(245 234 210 / 0.12);
+  /* --fo-ink-fixed intentionally stays dark so sticker fills with
+     dark ink text keep their editorial look in both schemes. */
+}
+
+/* Colour tokens are `inline` so every utility resolves through the
+   CSS variables above; the theme is flipped by the explicit
+   `html[data-theme="dark"]` attribute, no `dark:` variants needed. */
+@theme inline {
+  --color-canvas: var(--fo-canvas);
+  --color-surface: var(--fo-surface);
+  --color-surface-2: var(--fo-surface-2);
+  --color-tint: var(--fo-tint);
+  --color-ink: var(--fo-ink);
+  --color-ink-fixed: var(--fo-ink-fixed);
+  --color-soft: var(--fo-soft);
+  --color-muted: var(--fo-muted);
+  --color-line: var(--fo-line);
+  --color-gold: var(--fo-gold);
+  --color-sun: var(--fo-sun);
+  --color-sun-pale: var(--fo-sun-pale);
+  --color-tomato: var(--fo-tomato);
+  --color-coral-deep: var(--fo-coral-deep);
+  --color-teal: var(--fo-teal);
+  --color-teal-deep: var(--fo-teal-deep);
+  --color-leaf: var(--fo-leaf);
+  --color-cream: var(--fo-cream);
+  --color-on-ink: var(--fo-on-ink);
+  --color-on-gold: var(--fo-on-gold);
+  --color-danger: var(--fo-danger);
+
+  --shadow-sticker: var(--fo-shadow-sticker);
+  --shadow-hero: var(--fo-shadow-hero);
+  --shadow-puff: var(--fo-shadow-puff);
+  --shadow-paper: var(--fo-shadow-paper);
+}
+
+@theme {
+  --font-sans: "Bricolage Grotesque Variable", ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Bricolage Grotesque Variable", ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 26px;
+  --radius-xl: 40px;
+
+  --shadow-soft: 0 16px 34px -22px rgb(64 42 10 / 0.5);
+  --shadow-press: 0 3px 0 0 rgb(42 28 14 / 0.22);
+
+  --animate-fade-up: fade-up 0.5s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  --animate-pop: pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  --animate-spin-slow: spin 1.6s linear infinite;
+  --animate-float: float 5s ease-in-out infinite;
+  --animate-float-slow: float 7s ease-in-out infinite;
+  --animate-scan: scan 2s ease-in-out infinite;
+  --animate-spark: spark 2.6s ease-in-out infinite;
+  --animate-wiggle: wiggle 0.5s ease-in-out infinite;
+  --animate-swoosh: swoosh 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes swoosh {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) rotate(-2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1.5deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(1.5deg);
+  }
+}
+
+@keyframes scan {
+  0% {
+    top: 12%;
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    top: 84%;
+    opacity: 0.2;
+  }
+}
+
+@keyframes spark {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.8) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15) rotate(14deg);
+  }
+}
+
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: rotate(-1.5deg);
+  }
+  50% {
+    transform: rotate(1.5deg);
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background-color: var(--fo-canvas);
+  color: var(--fo-ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+  accent-color: var(--fo-gold);
+}
+
+html,
+body {
+  /* Organic decorations intentionally bleed past the canvas edges;
+     clip them instead of letting them widen the document. `clip`
+     (unlike `hidden`) does not make a scroll container, so the
+     sticky headers and fixed navigation keep working. */
+  overflow-x: clip;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: var(--fo-sun);
+  color: var(--fo-ink);
+}
+
+:focus-visible {
+  outline: 3px solid var(--fo-gold);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer utilities {
+  .pt-safe {
+    padding-top: var(--safe-top);
+  }
+  .pb-safe {
+    padding-bottom: var(--safe-bottom);
+  }
+  /* Single-column mobile-first canvas. On phones and tablets it is the
+     full viewport width; only from the desktop breakpoint does it cap to
+     a centered editorial width so the yellow environment stays visible
+     around the content. Mobile is the base — never a shrunk desktop. */
+  .app-max {
+    width: 100%;
+    margin-inline: auto;
+  }
+  /* The bottom sticker navigation: spans the whole phone width, then
+     stays a comfortable centered phone-width pill on larger screens so
+     it reads as a floating phone control, never a wide desktop bar. */
+  .nav-max {
+    width: 100%;
+    margin-inline: auto;
+  }
+  @media (min-width: 640px) {
+    .nav-max {
+      max-width: 34rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .app-max {
+      max-width: 72rem;
+    }
+  }
+  /* Small uppercase "kicker" editorial label. */
+  .kicker {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  /* Hand-drawn squiggle underline (inline SVG, repeats). */
+  .squiggle {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' x='0px' y='0px' width='120px' height='12px' viewBox='0 0 120 12' preserveAspectRatio='none'%3E%3Cpath d='M2 9 C24 2 40 11 60 6 S 98 2 118 8' fill='none' stroke='%23f4512c' stroke-width='3.4' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: repeat-x;
+    background-position: 0 100%;
+    background-size: 112px 10px;
+    padding-bottom: 0.55em;
+  }
+  /* Subtle grain/pixel noise overlay for hero sections. */
+  .grain {
+    position: relative;
+  }
+  .grain::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.06'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity: 0.55;
+  }
+  /* Faint ruled-paper lines for receipt compositions. */
+  .paper-lines {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0 27px,
+      rgb(42 28 14 / 0.05) 27px 28px
+    );
+  }
+  /* Rough sticker corner filler that softens hard right angles. */
+  .blob-corner {
+    border-radius: 58% 42% 55% 45% / 46% 55% 45% 54%;
+  }
+}

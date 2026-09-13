@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+build/
+
+# TypeScript build cache
+*.tsbuildinfo
+tsconfig.app.tsbuildinfo
+tsconfig.node.tsbuildinfo
+
+# Environment / secrets — never commit
+.env
+.env.*
+!.env.example
+*.pem
+.vscode/*.local.json
+
+# Worker — local secrets + wrangler state
+worker/.dev.vars
+worker/wrangler.local.toml
+.wrangler/
+.dev.vars
+
+# Test output
+coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+*.iml
+
+# Ad-hoc scripts (local usage only)
+*.tmp.mjs
+.visual-check.mjs
