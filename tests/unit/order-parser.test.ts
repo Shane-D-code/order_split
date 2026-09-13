@@ -79,9 +79,10 @@ describe("parseBillText", () => {
     expect(p.platform).toBe("zepto");
     expect(p.subtotal).toBe(20900);
     expect(p.deliveryFee).toBe(1900);
-    expect(p.handlingFee).toBe(300);
+    expect(p.handlingFee).toBeNull();
     expect(p.tax).toBe(500);
     expect(p.total).toBe(23600);
+    expect(p.unclassifiedFees).toContainEqual({ label: "Platform fee", value: 300 });
     expect(p.items[0]).toMatchObject({ name: "Milk 1L", quantity: 2, unitPrice: 8200 });
   });
 
@@ -122,5 +123,61 @@ To pay ₹53`);
     expect(parsed.items[0]).toMatchObject({ name: "Milk", quantity: 1, unitPrice: 5000, lineTotal: 5000 });
     expect(parsed.subtotal).toBe(5000);
     expect(parsed.total).toBe(5300);
+  });
+
+  it("keeps 'Coffee Shop' as a complete item name above its price", () => {
+    const parsed = parseBillText(`Coffee Shop
+1 x ₹99 ₹99
+Subtotal ₹99
+To pay ₹100`);
+    expect(parsed.items).toHaveLength(1);
+    expect(parsed.items[0]).toMatchObject({ name: "Coffee Shop", quantity: 1, unitPrice: 9900, lineTotal: 9900 });
+  });
+
+  it("keeps 'General Store' as a complete item name above its price", () => {
+    const parsed = parseBillText(`General Store
+2 x ₹45 ₹90
+Subtotal ₹90
+To pay ₹92`);
+    expect(parsed.items).toHaveLength(1);
+    expect(parsed.items[0]).toMatchObject({ name: "General Store", quantity: 2, unitPrice: 4500, lineTotal: 9000 });
+  });
+
+  it("keeps 'Fresh Store' as a complete item name above its price", () => {
+    const parsed = parseBillText(`Fresh Store
+1 x ₹40 ₹40
+Subtotal ₹40
+To pay ₹43`);
+    expect(parsed.items).toHaveLength(1);
+    expect(parsed.items[0]).toMatchObject({ name: "Fresh Store", quantity: 1, unitPrice: 4000, lineTotal: 4000 });
+  });
+
+  it("keeps a shop-suffix item name above the first fragment of the same item", () => {
+    const parsed = parseBillText(`Organic Fresh Store
+3 x ₹30 ₹90
+Subtotal ₹90
+To pay ₹93`);
+    expect(parsed.items).toHaveLength(1);
+    expect(parsed.items[0]).toMatchObject({ name: "Organic Fresh Store", quantity: 3, unitPrice: 3000, lineTotal: 9000 });
+  });
+
+  it("still flushes merchant headers that precede a product name", () => {
+    const parsed = parseBillText(`Fresh Store
+Milk
+1 x ₹50 ₹50
+Subtotal ₹50
+To pay ₹53`);
+    expect(parsed.items).toHaveLength(1);
+    expect(parsed.items[0]).toMatchObject({ name: "Milk", quantity: 1, unitPrice: 5000, lineTotal: 5000 });
+  });
+
+  it("still accumulates wrapped multi-line item names", () => {
+    const parsed = parseBillText(`Amul
+Milk 500ml
+2 x ₹30 ₹60
+Subtotal ₹60
+To pay ₹63`);
+    expect(parsed.items).toHaveLength(1);
+    expect(parsed.items[0]).toMatchObject({ name: "Amul Milk 500ml", quantity: 2, unitPrice: 3000, lineTotal: 6000 });
   });
 });
