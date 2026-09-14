@@ -54,6 +54,12 @@ export interface DraftItem {
   quantity: number;
   unitPrice: number | null;
   lineTotal: number;
+  /**
+   * True once the user has touched this item (edited a field, or removed
+   * it). Used to distinguish extracted/original values from user edits so
+   * the reviewed order is never mistaken for the untouched invoice.
+   */
+  edited?: boolean;
 }
 
 export interface Order {

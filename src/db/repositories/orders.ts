@@ -169,6 +169,10 @@ export async function createDraft(input: DraftInput & { id?: string }): Promise<
     discount: input.discount,
     total: input.total,
     currency: "INR",
+    unclassifiedFees: input.unclassifiedFees,
+    originalItems: input.originalItems,
+    originalSubtotal: input.originalSubtotal,
+    originalTotal: input.originalTotal,
     warnings: input.warnings,
     status: "editing",
     sourceDraftId: input.sourceDraftId,
@@ -185,7 +189,7 @@ export async function getDraft(id: string): Promise<DraftRow | null> {
 
 export async function updateDraft(
   id: string,
-  patch: Partial<Pick<DraftRow, "items" | "subtotal" | "deliveryFee" | "handlingFee" | "packagingFee" | "tax" | "discount" | "total" | "platform" | "orderedAt" | "warnings" | "image" | "rawText">>,
+  patch: Partial<Pick<DraftRow, "items" | "subtotal" | "deliveryFee" | "handlingFee" | "packagingFee" | "tax" | "discount" | "total" | "unclassifiedFees" | "removedItems" | "originalItems" | "originalSubtotal" | "originalTotal" | "platform" | "orderedAt" | "warnings" | "image" | "rawText">>,
 ): Promise<void> {
   await db.drafts.update(id, { ...patch, updatedAt: new Date().toISOString() });
 }

@@ -21,7 +21,7 @@ export function createOrderItem(input: {
   quantity: number;
   unitPrice: number;
 }): OrderItem {
-  const quantity = Math.max(1, Math.round(input.quantity));
+  const quantity = Number.isFinite(input.quantity) && input.quantity > 0 ? input.quantity : 1;
   const unitPrice = Math.max(0, Math.round(input.unitPrice));
   return {
     id: newId(),
@@ -58,7 +58,7 @@ export function computeOrderTotals(parts: {
   discount: number;
 }): OrderTotals {
   const itemTotals = parts.items.map((i) =>
-    computeLineTotal(Math.round(i.unitPrice), Math.round(i.quantity)),
+    computeLineTotal(Math.max(0, Math.round(i.unitPrice)), i.quantity),
   );
   const itemsTotal = computeItemsTotal(itemTotals);
   const discount = Math.max(0, Math.round(parts.discount));
@@ -162,7 +162,8 @@ export function orderFromDraft(input: {
 }): Order {
   const now = input.createdAt ?? new Date().toISOString();
   const items: OrderItem[] = input.items.map((i) => {
-    const quantity = Math.max(1, Math.round(i.quantity));
+    const quantity =
+      Number.isFinite(i.quantity) && i.quantity > 0 ? i.quantity : 1;
     const unitPrice =
       i.unitPrice === null ? Math.round(i.lineTotal / quantity) : Math.max(0, Math.round(i.unitPrice));
     return {

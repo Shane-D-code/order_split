@@ -29,6 +29,19 @@ export interface ParsedItem {
 }
 
 /**
+ * A fee-like line whose category could not be inferred from the invoice
+ * text (platform / convenience / service / membership …). The amount is
+ * preserved so the final total can still reconcile; the UI asks the user
+ * to classify it before confirming.
+ */
+export interface UnclassifiedFee {
+  /** The label text as printed, e.g. "Platform fee". */
+  label: string;
+  /** Integer paise. */
+  value: Paise;
+}
+
+/**
  * Structured candidate order produced by the parser. `null` fields mean
  * "not found on the bill" — they become warnings at validation time.
  * No field here is ever silently filled to make arithmetic work.
@@ -37,12 +50,23 @@ export interface ParsedOrder {
   platform: Platform | null;
   orderedAt: string | null;
   items: ParsedItem[];
+  /**
+   * True when the item scan ran away (far more "items" than any real bill
+   * could contain, e.g. 799) or otherwise failed in a way that makes the
+   * item list untrustworthy. The UI should say so instead of showing them.
+   */
+  itemsUnreliable?: boolean;
   subtotal: Paise | null;
   deliveryFee: Paise | null;
   handlingFee: Paise | null;
   packagingFee: Paise | null;
   tax: Paise | null;
   discount: Paise | null;
+  /**
+   * Fees that could not be confidently classified into the categories
+   * above. Preserved amounts, never merged into handlingFee silently.
+   */
+  unclassifiedFees: UnclassifiedFee[];
   total: Paise | null;
 }
 

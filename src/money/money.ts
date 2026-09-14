@@ -30,12 +30,12 @@ export function sum(values: Paise[]): Paise {
   return values.reduce((acc, v) => acc + v, 0);
 }
 
-/** Multiply an amount by an integer quantity. */
+/** Multiply an amount by a quantity (which may be decimal, e.g. 0.5 kg). */
 export function multiplyBy(a: Paise, qty: number): Paise {
-  if (!Number.isSafeInteger(qty)) {
-    throw new Error("multiplyBy: quantity must be an integer");
+  if (!Number.isFinite(qty) || qty < 0) {
+    throw new Error("multiplyBy: quantity must be a non-negative number");
   }
-  return a * qty;
+  return Math.round(a * qty);
 }
 
 /** Line total of a single item. */

@@ -1,5 +1,5 @@
-// Generates the PWA PNG icons (and apple touch icon) from an SVG sprite
-// using pure Node + pngjs. No native deps, no network.
+// Generates the PWA PNG icons (and apple touch icons) from the same design
+// as public/favicon.svg using pure Node + pngjs. No native deps, no network.
 import { PNG } from "pngjs";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -8,103 +8,116 @@ import { dirname, join } from "node:path";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const publicDir = join(root, "public");
 
-// Icon: rounded square, deep slate background, a white "basket/receipt" glyph.
-// We rasterize a small 32x32 design by supersampling and downscaling so we
-// need no external rasterizer: draw the SVG-like shapes manually.
-function render(size) {
-  const S = 8; // design grid size
-  const png = new PNG({ width: size, height: size });
-  const bg = [15, 23, 42]; // slate-900
-  const card = [248, 250, 252]; // slate-50 (receipt)
-  const accent = [52, 211, 153]; // emerald-400 (check)
-  // radial-ish rounded square background
-  const pad = Math.round(size * 0.06);
-  const r = size * 0.22;
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      let idx = (y * size + x) * 4;
-      const inside = inRR(x, y, pad, pad, size - pad, size - pad, r);
-      const c = inside ? bg : [0, 0, 0];
-      png.data[idx] = c[0];
-      png.data[idx + 1] = c[1];
-      png.data[idx + 2] = c[2];
-      png.data[idx + 3] = inside ? 255 : 0;
-    }
-  }
-  // receipt shape
-  const rx = size * 0.22;
-  const ry = size * 0.18;
-  const rw = size * 0.56;
-  const rh = size * 0.64;
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const idx = (y * size + x) * 4;
-      if (insideRect(x, y, rx, ry, rw, rh)) {
-        png.data[idx] = card[0];
-        png.data[idx + 1] = card[1];
-        png.data[idx + 2] = card[2];
-        // bumpy receipt bottom: two notches
-        const localY = y - ry;
-        const rowHeight = rh;
-        const pct = localY / rowHeight;
-        if (pct > 0.62) {
-          const notchW = rw * 0.16;
-          const notchH = rh * 0.1;
-          for (const nx of [0, 1]) {
-            const cx = rx + rw / 2 + (nx === 0 ? -1 : 1) * (rw * 0.2);
-            if (
-              x > cx - notchW / 2 &&
-              x < cx + notchW / 2 &&
-              y > ry + rh - notchH
-            ) {
-              png.data[idx] = bg[0];
-              png.data[idx + 1] = bg[1];
-              png.data[idx + 2] = bg[2];
-            }
-          }
-        }
-      }
-    }
-  }
-  // accent checkmark in the receipt
-  const cy = ry + rh * 0.62;
-  const sz = size * 0.16;
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const idx = (y * size + x) * 4;
-      if (
-        x > rx + rw * 0.28 &&
-        x < rx + rw * 0.72 &&
-        y > cy - sz &&
-        y < cy + sz
-      ) {
-        // approximate check path: |/_  between (rx+rw*0.36,cy) and (rx+rw*0.64,cy)
-        const nx = (x - (rx + rw * 0.3)) / (rw * 0.4);
-        const ny = (y - cy) / sz;
-        if (nx + ny > 0.55 && nx - ny > 0.3 && nx < 1.15) {
-          png.data[idx] = accent[0];
-          png.data[idx + 1] = accent[1];
-          png.data[idx + 2] = accent[2];
-        }
-      }
-    }
-  }
-  return png;
-}
+// Icon: amber rounded square, a cream "receipt" card with an ink outline, a
+// few faint ink lines and a red mini cart/down-tick line. Mirrors
+// public/favicon.svg (viewBox 0 0 64 64). We rasterize the 64x64 design with
+// supersampling so we need no external rasterizer: shapes are drawn by
+// sampling design-space coordinates.
+const AMBER = [242, 167, 27]; // #f2a71b
+const CREAM = [255, 249, 234]; // #fff9ea
+const INK = [42, 28, 14]; // #2a1c0e
+const RED = [239, 64, 32]; // #ef4020
 
-function inRR(x, y, x0, y0, x1, y1, r) {
+const BG = [0, 0, 64, 64, 16]; // rounded square, rx 16
+const RC = [15, 11, 49, 51, 4]; // receipt card, rx 4
+const STROKE = 2.4; // receipt outline width
+
+// faint horizontal lines (opacity 0.5): y=21, y=28 from x21..x43, y=35 x21..x35
+const LINES = [
+  [21, 21, 43, 21],
+  [21, 28, 43, 28],
+  [21, 35, 35, 35],
+];
+const LINE_W = 2.4;
+
+// red down-tick line: M22 44 l5-4 8 5 6-6 4 3
+const CHART = [
+  [22, 44],
+  [27, 40],
+  [35, 45],
+  [41, 39],
+  [45, 42],
+];
+const CHART_W = 2.8;
+
+function inRoundRect(x, y, x0, y0, x1, y1, r) {
   if (x < x0 || x > x1 || y < y0 || y > y1) return false;
   if (x >= x0 + r && x <= x1 - r) return true;
   if (y >= y0 + r && y <= y1 - r) return true;
   const cx = x < x0 + r ? x0 + r : x1 - r;
   const cy = y < y0 + r ? y0 + r : y1 - r;
-  return dx2(x, cx) + dy2(y, cy) <= r * r;
+  return (x - cx) ** 2 + (y - cy) ** 2 <= r * r;
 }
-function insideRect(x, y, x0, y0, w, h) {
-  return x >= x0 && x <= x0 + w && y >= y0 && y <= y0 + h;
+
+function distToSeg(x, y, ax, ay, bx, by) {
+  const vx = bx - ax;
+  const vy = by - ay;
+  let t = ((x - ax) * vx + (y - ay) * vy) / (vx * vx + vy * vy || 1);
+  t = Math.max(0, Math.min(1, t));
+  const dx = x - (ax + t * vx);
+  const dy = y - (ay + t * vy);
+  return Math.hypot(dx, dy);
 }
-const dx2 = (a, b) => (a - b) ** 2;
-const dy2 = (a, b) => (a - b) ** 2;
+
+function inStroke(x, y, segs, half) {
+  for (const s of segs) {
+    if (distToSeg(x, y, s[0], s[1], s[2], s[3]) <= half) return true;
+  }
+  return false;
+}
+
+function sampleColor(x, y) {
+  if (!inRoundRect(x, y, ...BG)) return null; // transparent outside
+  let [r, g, b] = AMBER;
+  // receipt outline (2.4 wide band) sits over the amber background
+  const outer = inRoundRect(x, y, RC[0] - STROKE / 2, RC[1] - STROKE / 2, RC[2] + STROKE / 2, RC[3] + STROKE / 2, RC[4] + STROKE / 2);
+  const inner = inRoundRect(x, y, RC[0] + STROKE / 2, RC[1] + STROKE / 2, RC[2] - STROKE / 2, RC[3] - STROKE / 2, Math.max(RC[4] - STROKE / 2, 0));
+  if (outer && !inner) {
+    [r, g, b] = INK;
+  } else if (inRoundRect(x, y, ...RC)) {
+    [r, g, b] = CREAM;
+  }
+  // faint ink lines, blended at 50% over whatever is below
+  if (inStroke(x, y, LINES, LINE_W / 2)) {
+    [r, g, b] = [0.5 * r + 0.5 * INK[0], 0.5 * g + 0.5 * INK[1], 0.5 * b + 0.5 * INK[2]];
+  }
+  // red chart line on top
+  if (inStroke(x, y, CHART.slice(0, -1).map((p, i) => [...p, ...CHART[i + 1]]), CHART_W / 2)) {
+    [r, g, b] = RED;
+  }
+  return [r, g, b];
+}
+
+// Supersample the 64x64 design into `size`x`size` pixels for smooth edges.
+function render(size) {
+  const SS = 6;
+  const png = new PNG({ width: size, height: size });
+  for (let py = 0; py < size; py++) {
+    for (let px = 0; px < size; px++) {
+      let ar = 0, ag = 0, ab = 0, aa = 0;
+      for (let sy = 0; sy < SS; sy++) {
+        for (let sx = 0; sx < SS; sx++) {
+          const x = ((px + (sx + 0.5) / SS) / size) * 64;
+          const y = ((py + (sy + 0.5) / SS) / size) * 64;
+          const c = sampleColor(x, y);
+          if (c) {
+            ar += c[0];
+            ag += c[1];
+            ab += c[2];
+            aa += 1;
+          }
+        }
+      }
+      const n = SS * SS;
+      const idx = (py * size + px) * 4;
+      png.data[idx] = Math.round(ar / n);
+      png.data[idx + 1] = Math.round(ag / n);
+      png.data[idx + 2] = Math.round(ab / n);
+      png.data[idx + 3] = Math.round((aa / n) * 255);
+    }
+  }
+  return png;
+}
 
 mkdirSync(publicDir, { recursive: true });
 

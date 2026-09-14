@@ -1,7 +1,7 @@
 import Dexie, { type EntityTable } from "dexie";
 import type { DraftItem, Platform, OrderSource } from "../domain/types";
 import type { Paise } from "../money/money";
-import type { ValidationWarning } from "../parse/types";
+import type { UnclassifiedFee, ValidationWarning } from "../parse/types";
 
 /**
  * Storage rows. Rows are the physical shapes stored in IndexedDB; domain
@@ -60,6 +60,18 @@ export interface DraftRow {
   discount: Paise;
   total: Paise;
   currency: "INR";
+  /** Fees the parser could not classify, preserved for the review step. */
+  unclassifiedFees?: UnclassifiedFee[];
+  /**
+   * Snapshot of the items as extracted, before any user edit. Kept so the
+   * reviewed order is never mistaken for the untouched invoice and so a
+   * removal can be undone. Items removed by the user live in `removedItems`.
+   */
+  originalItems?: DraftItem[];
+  removedItems?: DraftItem[];
+  /** Original (extracted) subtotal/total for comparison after edits. */
+  originalSubtotal?: Paise;
+  originalTotal?: Paise;
   /** Validation warnings computed from the draft contents. */
   warnings: ValidationWarning[];
   status: "editing";

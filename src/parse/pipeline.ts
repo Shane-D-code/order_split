@@ -49,6 +49,7 @@ export function emptyParsedOrder(): ParsedOrder {
     packagingFee: null,
     tax: null,
     discount: null,
+    unclassifiedFees: [],
     total: null,
   };
 }

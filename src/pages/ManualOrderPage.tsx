@@ -114,6 +114,7 @@ export function ManualOrderPage() {
       packagingFee,
       tax,
       discount,
+      unclassifiedFees: [],
       total,
     };
     const warnings = validateParsedOrder(parsed);

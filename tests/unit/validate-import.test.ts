@@ -82,6 +82,28 @@ describe("validateParsedOrder", () => {
     expect(hasBlockingErrors(warnings)).toBe(false);
     expect(warning?.allowOverride).toBe(true);
   });
+
+  it("accepts a total where the discount is embedded in the item prices", () => {
+    // Blinkit shows an item total that already includes the product discount.
+    const warnings = validateParsedOrder(
+      parsed({
+        items: [{ name: "A", quantity: 1, unitPrice: 36300, lineTotal: 36300 }],
+        subtotal: 36300,
+        discount: 400,
+        handlingFee: 1100,
+        deliveryFee: 0,
+        total: 37400,
+      }),
+    );
+    expect(warnings.some((w) => w.code === "TOTAL_MISMATCH")).toBe(false);
+  });
+
+  it("blocking when no trustworthy items were identified", () => {
+    const warnings = validateParsedOrder(parsed({ items: [], itemsUnreliable: true }));
+    expect(warnings.some((w) => w.code === "ITEMS_UNRELIABLE")).toBe(true);
+    expect(warnings.some((w) => w.code === "ITEMS_NOT_FOUND")).toBe(false);
+    expect(hasBlockingErrors(warnings)).toBe(true);
+  });
 });
 
 describe("validateDraft", () => {

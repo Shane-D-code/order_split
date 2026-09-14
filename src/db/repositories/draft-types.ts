@@ -1,6 +1,6 @@
 import type { DraftItem, OrderSource, Platform } from "../../domain/types";
 import type { Paise } from "../../money/money";
-import type { ValidationWarning } from "../../parse/types";
+import type { UnclassifiedFee, ValidationWarning } from "../../parse/types";
 
 /**
  * Shape used to create a new in-flight draft (usually produced by the
@@ -21,6 +21,10 @@ export interface DraftInput {
   tax: Paise;
   discount: Paise;
   total: Paise;
+  unclassifiedFees?: UnclassifiedFee[];
+  originalItems?: DraftItem[];
+  originalSubtotal?: Paise;
+  originalTotal?: Paise;
   warnings: ValidationWarning[];
   sourceDraftId?: string;
   createdAt?: string;

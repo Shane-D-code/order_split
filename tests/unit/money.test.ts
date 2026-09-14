@@ -30,9 +30,9 @@ describe("money", () => {
     expect(computeLineTotal(4550, 3)).toBe(13650);
   });
 
-  it("multiplies only by integers", () => {
-    expect(() => multiplyBy(100, 1.5)).toThrow();
+  it("multiplies by whole and fractional quantities", () => {
     expect(multiplyBy(100, 3)).toBe(300);
+    expect(multiplyBy(100, 0.5)).toBe(50);
   });
 
   it("computes items totals and final totals", () => {
